@@ -1,0 +1,21 @@
+<RCC>
+    <qresource prefix="/">
+        <file>image/fontawesome-webfont.ttf</file>
+        <file>image/main_about.png</file>
+        <file>image/main_company.png</file>
+        <file>image/main_config.png</file>
+        <file>image/main_data.png</file>
+        <file>image/main_exit.png</file>
+        <file>image/main_help.png</file>
+        <file>image/main_main.png</file>
+        <file>image/main_person.png</file>
+        <file>image/am.png</file>
+        <file>image/cdr.png</file>
+        <file>image/dtmb.png</file>
+        <file>image/Moni_radio.png</file>
+        <file>image/Moni_tv.png</file>
+        <file>image/ChannelScan.png</file>
+        <file>image/TimeSet.png</file>
+        <file>image/ChannelSet.png</file>
+    </qresource>
+</RCC>
