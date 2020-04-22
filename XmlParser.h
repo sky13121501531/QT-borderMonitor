@@ -1,5 +1,5 @@
-#ifndef _XMLPARSER_H_
-#define _XMLPARSER_H_
+#ifndef XMLPARSER_H
+#define XMLPARSER_H
 
 #include <string>
 #include <list>
@@ -164,4 +164,4 @@ private:
 	long listIndex;
 };
 
-#endif
+#endif //XMLPARSER_H

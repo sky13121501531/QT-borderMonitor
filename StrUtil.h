@@ -1,8 +1,9 @@
-#ifndef __STRUTIL__
-#define __STRUTIL__
+#ifndef STRUTIL_H
+#define STRUTIL_H
 
-#include <string>
+#include <cstring>
 #include <time.h>
+#include <stdlib.h>
 #include "externType.h"
 using namespace std;
 
@@ -25,12 +26,10 @@ static float Str2FloatForFMFreq(string str);
 static string Float2Str(float floater);
 static string Float2Str1(float floater);//四舍五入保留一位小数
 
-static int Str2IntForQam(string str);
 static int GetStrPixelLength(char* str, int font);
 
 static string GetStrNumID(string strip);
 static void GetIPNumID(string strip,string &ChassisID,string &SlotID);
-
 /*
  ********************************
  * 注  | 模拟电视及调频广播板卡流设置指令
@@ -49,14 +48,11 @@ static string MonitorCardTs_paramset(moniter_paramset m_paramset);
 static string MonitorCardTs_ChannelScan(moniter_channelscan m_channelscan);
 /*
  ********************************
- * 注  | 模拟电视及调频广播板卡频道扫描指令
- *     |in----moniter_channelscan，结构体
- *     |out---频道扫描指令，格式xml,类型string
+ * 注  | 模拟电视及调频广播板卡校时指令
+ *     | 校时时间往后提前2S
  ********************************
 */
 static string MonitorCardTs_TimeSet();
-
-
 };
-#endif
+#endif //STRUTIL_H
 

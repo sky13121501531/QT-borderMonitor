@@ -1,4 +1,4 @@
-#pragma warning(disable:4996)
+
 #include <math.h>
 #include "StrUtil.h"
 
@@ -127,38 +127,6 @@ std::string StrUtil::Float2Str1( float floater )
 	string strResult=string(result);
 	return strResult;
 }
-
-int StrUtil::Str2IntForQam(string str)
-{
-	if(!strcmp(str.c_str(),"QAM16"))
-	{
-		return 0;
-	}
-	else if(!strcmp(str.c_str(),"QAM32"))
-	{
-		return 1;
-	}
-	else if(!strcmp(str.c_str(),"QAM64"))
-	{
-		return 2;
-	}
-	else if(!strcmp(str.c_str(),"QAM128"))
-	{
-		return 3;
-	}
-	else if(!strcmp(str.c_str(),"QAM256"))
-	{
-		return 4;
-	}
-	else if(!strcmp(str.c_str(),"QAM4"))
-	{
-		return 5;
-	}
-	else
-	{
-		return Str2Int(str);
-	}
-}
 int StrUtil::GetStrPixelLength(char* hz, int font)
 {
 	int i = 0;
@@ -248,7 +216,6 @@ int StrUtil::GetStrPixelLength(char* hz, int font)
 		}
 
 	}
-
 	memset(hz, 0, 128);
 	int addNum = 16 - iDistance%16;
 	
@@ -309,7 +276,8 @@ string StrUtil::MonitorCardTs_paramset(moniter_paramset m_paramset)
     string strDeviceSrcXml ="<?xml version=\"1.0\" encoding=\"GB2312\" standalone=\"yes\"?>\
             <Msg Version=\"1.0\" MsgID=\"";
     strDeviceSrcXml += StrUtil::Long2Str(time(0));
-    strDeviceSrcXml += "\"><Type>ChangeProgramInfo</Type>\
+    strDeviceSrcXml += "\">\
+            <Type>ChangeProgramInfo</Type>\
             <Data>\
             <Channel>";
     strDeviceSrcXml += m_paramset.Channel;
@@ -322,7 +290,7 @@ string StrUtil::MonitorCardTs_paramset(moniter_paramset m_paramset)
     strDeviceSrcXml += m_paramset.Frequency;
     strDeviceSrcXml += "</Frequency>\
             <ModulationType>";
-    strDeviceSrcXml += m_paramset.Frequency;
+    strDeviceSrcXml += m_paramset.ModulationType;
     strDeviceSrcXml += "</ModulationType>\
             </Tuner>\
             <Encoder>\
@@ -341,13 +309,13 @@ string StrUtil::MonitorCardTs_paramset(moniter_paramset m_paramset)
             <Text>";
     strDeviceSrcXml += m_paramset.text;
     strDeviceSrcXml +=  "</Text>\
-            <PositionX>100</PositionX>\
+            <PositionX>628</PositionX>\
             <PositionY>1</PositionY>\
             <Align>RIGHT</Align>\
             </OSD>\
             <TimeStamp>\
             <Enable>1</Enable>\
-            <PositionX>464</PositionX>\
+            <PositionX>628</PositionX>\
             <PositionY>40</PositionY>\
             <Align>RIGHT</Align>\
             </TimeStamp>\
@@ -356,7 +324,7 @@ string StrUtil::MonitorCardTs_paramset(moniter_paramset m_paramset)
             </Volume>\
             </Data>\
             </Msg>";
-            return strDeviceSrcXml;
+    return strDeviceSrcXml;
 }
 
 string StrUtil::MonitorCardTs_ChannelScan(moniter_channelscan m_channelscan)

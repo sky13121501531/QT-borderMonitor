@@ -1,11 +1,14 @@
 ﻿#pragma execution_character_set("utf-8")
 #include "uidemo01.h"
 #include "ui_uidemo01.h"
+#include <vlc/vlc.h>
 #include "iconhelper.h"
-
+#include "qttcpsocekt.h"
+#include "circleprogress.h"
 UIDemo01::UIDemo01(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::UIDemo01)
+    ui(new Ui::UIDemo01),
+    m_nIndex(1)
 {
     ui->setupUi(this);
     this->initForm();
@@ -14,6 +17,17 @@ UIDemo01::UIDemo01(QWidget *parent) :
     this->init_TV();
     this->init_TabWidget_Monitor_TV_TableView();
     this->init_ReadConfigSysCardIP();
+
+    HWND SCRE = (HWND)ui->widget_VLCPlayer->winId();
+    m_vlc.SetOutputWindow(SCRE);
+    ui->widget_VLCPlayer->show();
+//    m_pLoadingLabel = new QLabel(this);
+//    m_pLoadingLabel->setText(tr("我是进度等待图片"));
+//    m_pLoadingLabel->setGeometry(rect().x() + 400, rect().y()/2 + 200,200, 200);
+//    m_pLoadingLabel->setAttribute(Qt::WA_TranslucentBackground);//背景透明
+//    timer = new QTimer(this);
+//    timer->setInterval(100);
+//    connect(timer, &QTimer::timeout, this, &UIDemo01::ShowWaitPic);
 }
 UIDemo01::~UIDemo01()
 {
@@ -33,7 +47,7 @@ bool UIDemo01::eventFilter(QObject *watched, QEvent *event)
 void UIDemo01::initskin()
 {
     QImage* imgskinblack = new QImage;
-    if(!(imgskinblack->load("../uidemo01/skin/skinblack.png"))) //加载图像
+    if(!(imgskinblack->load("../skin/skinblack.png"))) //加载图像
     {
         QMessageBox::information(this,
                                  tr("皮肤加载警告"),
@@ -45,7 +59,7 @@ void UIDemo01::initskin()
         ui->label_skinblack->setPixmap(QPixmap::fromImage(*imgskinblack));
     ui->checkBox_black->setChecked(true);
     QImage* imgskinwhite = new QImage;
-    if(!(imgskinwhite->load("../uidemo01/skin/skinwhite.png"))) //加载图像
+    if(!(imgskinwhite->load("../skin/skinwhite.png"))) //加载图像
     {
         QMessageBox::information(this,
                                  tr("皮肤加载警告"),
@@ -160,7 +174,6 @@ void UIDemo01::buttonClick()
         exit(0);
     }
 }
-
 void UIDemo01::init_TV()
 {
     QStringList QList;
@@ -184,11 +197,38 @@ void UIDemo01::init_ProList_TableView()
     Prolist_Model->setHeaderData(0,Qt::Horizontal,QString::fromLocal8Bit("频道列表"));
     ui->tableView_PROLIST->setModel(Prolist_Model);
     ui->tableView_PROLIST->horizontalHeader()->setDefaultAlignment(Qt::AlignHCenter);
-    ui->tableView_PROLIST->setShowGrid(false);
+    ui->tableView_PROLIST->setShowGrid(true);
     ui->tableView_PROLIST->resizeColumnsToContents();
+    ui->tableView_PROLIST->setEditTriggers(/*QAbstractItemView::DoubleClicked | */QAbstractItemView::NoEditTriggers);
     ui->tableView_PROLIST->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-}
+    ui->tableView_PROLIST->verticalHeader()->hide();
 
+    connect(ui->tableView_PROLIST, SIGNAL(clicked(const QModelIndex &)), this, SLOT(onTableClicked(const QModelIndex &)));
+}
+void UIDemo01::onTableClicked(const QModelIndex &index)
+{
+    if (index.isValid())
+    {
+        QString cellText = index.data().toString();
+        string UDPSTR;
+        QMap<string,string>::iterator pIter = Prolist_map.begin();;
+        while (pIter != Prolist_map.end())
+        {
+            if(pIter.key() == cellText.toStdString())
+            {
+                UDPSTR = pIter.value();
+                break;
+            }
+            ++pIter;
+        }
+        if(UDPSTR.size()>0)
+        {
+            QString strurl(UDPSTR.c_str());
+            m_vlc.OpenMedia(UDPSTR.c_str());
+            m_vlc.Play();
+        }
+    }
+}
 void UIDemo01::init_TabWidget_Monitor_TV_TableView()
 {
     /*tableview控件初始化*/
@@ -225,6 +265,47 @@ void UIDemo01::init_ReadConfigSysCardIP()
     ui->tableView_SysConfig->setShowGrid(true);
     ui->tableView_SysConfig->resizeColumnsToContents();
     ui->tableView_SysConfig->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+}
+
+void UIDemo01::ParaChannelRetXML(string ChannelXml,QStringList &QListVecFreq)
+{
+    string tmpStr = ChannelXml;
+    size_t xmlPos = tmpStr.find_first_of("<");
+    if (xmlPos != std::string::npos)
+    {
+        tmpStr = tmpStr.substr(xmlPos);
+    }
+    XmlParser retDeviceParser;
+    retDeviceParser.Set_xml(tmpStr);
+    std::string strXmlRet = retDeviceParser.GetNodeText(retDeviceParser.GetNodeFromPath((char*)"Msg/Status"));
+    if( strXmlRet != std::string("SUCCESS"))
+    {
+        return;
+    }
+    else
+    {
+        pXMLNODE freqNode = NULL;
+        pXMLNODE ScanNumNode = retDeviceParser.GetNodeFromPath((char*)"Msg/Data/ScanResult");
+        string FreqNumstr,strtmpFreq;
+        retDeviceParser.GetAttrNode(ScanNumNode,"FreqNum",FreqNumstr);
+        if(StrUtil::Str2Int(FreqNumstr)>0)
+        {
+            pXMLNODELIST channelNodeList = retDeviceParser.GetNodeList(ScanNumNode);
+            for (int i=0; i<channelNodeList->Size(); i++)
+            {
+                freqNode = retDeviceParser.GetNextNode(channelNodeList);
+                string tmpFreq = retDeviceParser.GetNodeText(freqNode);
+                QListVecFreq << tmpFreq.c_str();
+                strtmpFreq+="\t频点:";
+                strtmpFreq+=tmpFreq;
+                strtmpFreq+="\n";
+            }
+        }
+        else
+        {
+            return;
+        }
+    }
 }
 bool UIDemo01::ReadConfigSysCardIP(std::string fileConfigIp)
 {
@@ -311,7 +392,6 @@ void UIDemo01::on_btnMenu_Max_clicked()
         location = this->geometry();
         this->setGeometry(qApp->desktop()->availableGeometry());
     }
-
     this->setProperty("canMove", max);
     max = !max;
 }
@@ -325,6 +405,7 @@ void UIDemo01::on_pushButton_add_clicked()
     /*
         ******* 模拟电视频道表选择添加---TableView*******
     */
+
     moniter_paramset tmpSet;
     QString QstrDevHttpIP,Qfreq,Qchannel,QstrChannel,QstrUdpAddr,QstrProName;
     QstrDevHttpIP = ui->comboBox_TV_IP->itemText(ui->comboBox_TV_IP->currentIndex());
@@ -334,12 +415,32 @@ void UIDemo01::on_pushButton_add_clicked()
 
     Qfreq = ui->comboBox_TV_FREQ->itemText(ui->comboBox_TV_FREQ->currentIndex());
     Qchannel = ui->comboBox_TV_CHANNEL->itemText(ui->comboBox_TV_CHANNEL->currentIndex());
+    if(!ChannelSet_vector.isEmpty())
+    {
+        for(int i =0;i<ChannelSet_vector.size();i++)
+        {
+            if(Qchannel.toStdString() == ChannelSet_vector[i].Channel)
+            {
+                QMessageBox::information(NULL, "警告", "此通道已经存在", QMessageBox::Yes, QMessageBox::Yes);
+                return;
+            }
+        }
+    }
     tmpSet.Type = "TV";
     tmpSet.TsIP = string("238") + string(".") + Chassid + string(".") + slotID + string(".") +  Qchannel.toStdString();
     tmpSet.TsPort = StrUtil::Int2Str(ATVMOREPORT);
-    tmpSet.ModulationType = "PLANK";
+    tmpSet.ModulationType = "PALDK";
     tmpSet.Channel = Qchannel.toStdString();
-    tmpSet.text = tmpSet.Frequency + string("TV");
+
+    string tmpOSDText = ui->lineEdit_TV_SERNAME->text().toStdString();
+    if(tmpOSDText=="")
+    {
+        tmpSet.text = string("TV_") + tmpSet.Frequency + tmpSet.Channel;
+    }
+    else
+    {
+        tmpSet.text = tmpOSDText+tmpSet.Channel;
+    }
     tmpSet.Frequency = Qfreq.toStdString();
     tmpSet.UDPAddr = string("udp://@") + tmpSet.TsIP + string(":") + tmpSet.TsPort;
     tmpSet.VideoBitrate = "1500000";
@@ -359,13 +460,60 @@ void UIDemo01::on_pushButton_add_clicked()
             for(int j =0;j<5;j++)
             {
                 //设置字符颜色
-                ChannelSet_Model->item(i,j)->setForeground(QBrush(QColor(255, 0, 0)));
+                ChannelSet_Model->item(i,j)->setForeground(QBrush(QColor(255, 255, 255)));
                 //设置字符位置
                 ChannelSet_Model->item(i,j)->setTextAlignment(Qt::AlignCenter);
             }
         }
     }
 }
+
+void UIDemo01::on_pushButton_ChannelSet_clicked()
+{ 
+    if(!ChannelSet_vector.isEmpty())
+    {
+        Prolist_Model->removeRows(0,Prolist_Model->rowCount());
+        for(int i = 0;i< ChannelSet_vector.size();i++)
+        {
+            string tmpXMLChannelSet = StrUtil::MonitorCardTs_paramset(ChannelSet_vector[i]);
+            string sendmsg = PostHttpHeader(ui->comboBox_TV_IP->currentText().toStdString(),tmpXMLChannelSet.length());
+            sendmsg += tmpXMLChannelSet;
+            QString qstring;
+            qstring = QString(QString::fromLocal8Bit(sendmsg.c_str()));
+            QByteArray strRet = qstring.toUtf8();
+            XSocketClient tmpSocket;
+            if(tmpSocket.ConnectTo(ui->comboBox_TV_IP->currentText(),MONICARDPORT,strRet)==ERROR_NO)
+            {
+                if(tmpSocket.read()==ERROR_NO)
+                {
+                    QByteArray recvdata = tmpSocket.GetRecvData();
+                    QString strtmp(recvdata);
+                    if(strtmp.indexOf("SUCCESS")==-1)
+                    {
+                        QMessageBox::information(NULL, "警告", "设置失败", QMessageBox::Yes, QMessageBox::Yes);
+                        return;
+                    }
+                    else
+                    {
+                        Prolist_Model->setItem(i,0,new QStandardItem(QString(ChannelSet_vector[i].text.c_str())));
+                        //设置字符颜色
+                        Prolist_Model->item(i,0)->setForeground(QBrush(QColor(187, 255, 255)));
+                        //设置字符位置
+                        Prolist_Model->item(i,0)->setTextAlignment(Qt::AlignCenter);
+
+                        Prolist_map.insert(ChannelSet_vector[i].text,ChannelSet_vector[i].UDPAddr);
+                    }
+                }
+                else if(tmpSocket.read()==ERROR_TIMEOUT)
+                {
+                    QMessageBox::information(NULL, "警告", "电视频道设置时连接超时", QMessageBox::Yes, QMessageBox::Yes);
+                    return;
+                }
+            }
+        }
+    }
+}
+
 bool UIDemo01::SaveFile_TV_ProList()
 {
     /*保存到磁盘*/
@@ -403,6 +551,38 @@ bool UIDemo01::SaveFile_TV_ProList()
         Parser.SaveAsFile(Filename.c_str());
     }
     return true;
+}
+
+string UIDemo01::PostHttpHeader(string strip, int len)
+{
+    //构造post http请求头
+        std::string strHeader = "";
+        strHeader += "POST /";
+        strHeader += "perform";
+        strHeader += " HTTP/1.1\r\n";
+        strHeader += "Host: ";
+        strHeader += strip;
+        strHeader += ":";
+        strHeader += "8080";
+        strHeader += "\r\n";
+        strHeader += "Cache-Control: no-cache\r\n";
+        std::string strLen = StrUtil::Int2Str(len);
+        strHeader += "Content-Length: ";
+        strHeader += strLen;
+        strHeader += " \r\n";
+        strHeader += "Content-Type:text/xml \r\n";
+        strHeader += "\r\n";
+        return strHeader;
+}
+
+void UIDemo01::ShowWaitPic()
+{
+    m_nIndex++;
+    if (m_nIndex > 8)
+        m_nIndex = 1;
+
+    QPixmap pixmap(QString("C:/Users/Administrator/Desktop/QTJSWStool/uidemo01/image/blackprogress%1").arg(m_nIndex));
+    m_pLoadingLabel->setPixmap(pixmap);
 }
 void UIDemo01::on_commandLinkButton_clicked()
 {
@@ -463,7 +643,7 @@ void UIDemo01::on_commandLinkButton_clicked()
                 for(int j = 0; j < 2; j++)
                 {
                     //设置字符颜色
-                    Config_Model->item(i,j)->setForeground(QBrush(QColor(200, 200, 0)));
+                    Config_Model->item(i,j)->setForeground(QBrush(QColor(255, 255, 255)));
                     //设置字符位置
                     Config_Model->item(i,j)->setTextAlignment(Qt::AlignCenter);
                 }
@@ -476,21 +656,50 @@ void UIDemo01::on_commandLinkButton_clicked()
         for(int j = 0; j < 2; j++)
         {
             //设置字符颜色
-            Config_Model->item(0,j)->setForeground(QBrush(QColor(180, 242, 0)));
+            Config_Model->item(0,j)->setForeground(QBrush(QColor(64, 224, 208)));
             //设置字符位置
             Config_Model->item(0,j)->setTextAlignment(Qt::AlignCenter);
         }
     }
 }
-
-void UIDemo01::on_pushButton_clicked()
+void UIDemo01::on_pushButton_channelscan_clicked()
 {
     /*
         ******* 模拟电视频道扫描---TableView*******
     */
-
+    moniter_channelscan mTv_channelscan;
+    mTv_channelscan.Type = "TV";
+    mTv_channelscan.Channel = ui->comboBox_TV_CHANNEL->currentText().toStdString();
+    string xmlContent = StrUtil::MonitorCardTs_ChannelScan(mTv_channelscan);
+    string sendmsg = PostHttpHeader(ui->comboBox_TV_IP->currentText().toStdString(),xmlContent.length());
+    sendmsg += xmlContent;
+    QString qstring;
+    qstring = QString(QString::fromLocal8Bit(sendmsg.c_str()));
+    QByteArray strRet = qstring.toUtf8();
+    XSocketClient tmpSocket;
+    if(tmpSocket.ConnectTo(ui->comboBox_TV_IP->currentText(),MONICARDPORT,strRet)==ERROR_NO)
+    {
+        if(tmpSocket.read()==ERROR_NO)
+        {
+            QByteArray recvdata = tmpSocket.GetRecvData();
+            QString strtmp(recvdata);
+            QStringList QList;
+            QList.clear();
+            ParaChannelRetXML(strtmp.toStdString(),QList);
+            if(QList.size()>0)
+            {
+                ui->comboBox_TV_FREQ->clear();
+                ui->comboBox_TV_FREQ->addItems(QList);
+                ui->comboBox_TV_FREQ->setCurrentIndex(0);
+            }
+        }
+        else if(tmpSocket.read()==ERROR_TIMEOUT)
+        {
+            qDebug()<<"频道扫描指令超时";
+        }
+    }
+    //timer->stop();
 }
-
 void UIDemo01::on_pushButton_5_clicked()
 {
     /*
@@ -533,7 +742,6 @@ void UIDemo01::on_checkBox_black_clicked()
     ui->checkBox_black->setChecked(true);
     ui->checkBox_white->setChecked(false);
 }
-
 void UIDemo01::on_checkBox_white_clicked()
 {
     //加载样式表
@@ -547,4 +755,14 @@ void UIDemo01::on_checkBox_white_clicked()
     }
     ui->checkBox_black->setChecked(false);
     ui->checkBox_white->setChecked(true);
+}
+
+void UIDemo01::timeStart()
+{
+    timer->start();
+}
+
+void UIDemo01::timeStop()
+{
+    timer->stop();
 }

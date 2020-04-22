@@ -303,7 +303,7 @@ bool XmlParser::Get_xml(std::string &xmlstr)
 	bool ret = false;
 	char temp[100] = {0};
 	unsigned long pid=5400/*ACE_OS::thr_self()*/;
-	ultoa(pid,temp,10);
+    //ultoa(pid,temp,10);
 	if (mXmlDocPtr == NULL)
 		return false;
 	if (mXmlDocPtr != NULL)

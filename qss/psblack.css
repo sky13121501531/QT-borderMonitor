@@ -626,7 +626,15 @@ border-radius:0px;
 QLineEdit,QTextEdit,QPlainTextEdit,QSpinBox,QDoubleSpinBox,QComboBox,QDateEdit,QTimeEdit,QDateTimeEdit{
 background:#444444;
 }
-
+QMessageBox {
+border-color:#32435E; border-width:1px; border-radius: 3px;
+min-width:30px; min-height:23px;
+/*font-family:"宋体";font-size:36px;*/
+/*border-image:url(./config/qss/style_1/images/messageBox_background.png);*/
+height: 300px;
+width: 200px;
+border: none;
+  }
 *:disabled{
 background:#444444;
 border-color:#484848;
